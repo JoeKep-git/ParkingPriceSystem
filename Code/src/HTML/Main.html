@@ -2,9 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script type='text/javascript' src='http://www.bing.com/api/maps/mapcontrol?callback=GetMap&key=ApXX9iOE9c3LpsdUBeX9eiWaaPhbdEpSzlAM3uwFsspQocDgyW1eE9xXFyYZlfmM' async defer></script>
     <title>Petrol Price System</title>
+    <script type="text/javascript">
+        function GetMap()
+        {
+            var map = new Microsoft.Maps.Map('#myMap');
+        }
+     </script>
 </head>
-<body>
-
+<body onload="GetMap()">
+    <h1>Hello Petrol Pricing System</h1>
+    <div id="myMap" style='position:relative;width:600px;height:400px;'></div>
 </body>
 </html>
