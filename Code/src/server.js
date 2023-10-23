@@ -1,9 +1,21 @@
-const http = require('http')
-const port = 8000
+const https = require('https')
 const fs = require('fs');
 const express = require("express");
 const app = express();
+const env = require('dotenv').config();
 
+//HTTPS Certificates
+const options = {
+    key: fs.readFileSync(__dirname+'/Certificates/server.key'),
+    cert: fs.readFileSync(__dirname+'/Certificates/server.crt')
+}
+ 
+
+
+//SERVER PORT
+const PORT = process.env.PORT || 8000;
+
+//GETTING THE MAIN PAGE
 app.get('/', (req, res) => {
     fs.readFile(__dirname+'/HTML/Main.html', 'utf8', (err, data) => {
     if (err) {
@@ -35,4 +47,7 @@ app.get('/', (req, res) => {
     Tesco	https://www.tesco.com/fuel_prices/fuel_prices_data.json
  */
 
-app.listen(port, () => { console.log(`Server is running on port ${port}`) });
+//create HTTPS server
+const server = https.createServer(options, app).listen(PORT, () => {
+    console.log('Server running on port ' + PORT);
+});
