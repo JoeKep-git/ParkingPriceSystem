@@ -5,7 +5,6 @@ const app = express();
 const env = require('dotenv').config();
 const axios = require('axios');
 const request = require('request-promise');
-const { resolve } = require('path');
 const zlib = require('zlib');
 
 //HTTPS Certificates
@@ -65,7 +64,7 @@ const urls = [
 //Function to get data from url
 function getData(url, timeout) {
     return new Promise((resolve, reject) => {
-        const options = {
+        const getOptions = {
             headers: {
                 'Accept-Encoding': 'gzip'
             }
@@ -73,7 +72,7 @@ function getData(url, timeout) {
 
         //HTTPS get request
         //using gzip for compression
-        const req = https.get(url, options, (res) => {
+        const req = https.get(url, getOptions, (res) => {
             let data = '';
             
             const encoding = res.headers['content-encoding'];
@@ -91,7 +90,7 @@ function getData(url, timeout) {
         });
 
         req.on('timeout', () => {
-            reject(new Error('Request timed out for url: ' + url));
+            reject(new Error(`Request timed out for url: ${url}`));
         });
 
         req.setTimeout(timeout);
@@ -103,7 +102,7 @@ const timeout = 5000; // 5 seconds
 
 //GETTING THE DATA FROM THE URLS
 app.get('/data', async (req, res) => {
-    let responseData = [];
+    const responseData = [];
 
     for (const url of urls) {
         //throwing error in getData and catching it here
