@@ -29,7 +29,20 @@ app.get('/', (req, res) => {
 });
 
 //TODO: try and get the bing api to work on backend and then send the data to the frontend
-
+const urls = [
+    'https://applegreenstores.com/fuel-prices/data.json',
+    'https://fuelprices.asconagroup.co.uk/newfuel.json',
+    'https://storelocator.asda.com/fuel_prices_data.json',
+    'https://www.bp.com/en_gb/united-kingdom/home/fuelprices/fuel_prices_data.json',
+   	'https://www.esso.co.uk/-/media/Project/WEP/Esso/Esso-Retail-UK/roadfuelpricingscheme',
+    'https://images.morrisons.com/petrol-prices/petrol.json',
+    'https://fuel.motorfuelgroup.com/fuel_prices_data.json',
+    'https://www.rontec-servicestations.co.uk/fuel-prices/data/fuel_prices_data.json',
+    'https://api.sainsburys.co.uk/v1/exports/latest/fuel_prices_data.json',
+    'https://www.sgnretail.uk/files/data/SGN_daily_fuel_prices.json',
+    'https://www.shell.co.uk/fuel-prices-data.html',
+    'https://www.tesco.com/fuel_prices/fuel_prices_data.json'
+];
 //TODO: read json links and display them on the map
 
 /**
