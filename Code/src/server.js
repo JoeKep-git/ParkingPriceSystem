@@ -16,9 +16,12 @@ const options = {
 //SERVER PORT
 const PORT = process.env.PORT || 8000;
 
+//Serving static files
+app.use(express.static(__dirname+'/Public'));
+
 //GETTING THE MAIN PAGE
 app.get('/', (req, res) => {
-    fs.readFile(__dirname+'/HTML/Main.html', 'utf8', (err, data) => {
+    fs.readFile(__dirname+'/Public/HTML/Main.html', 'utf8', (err, data) => {
     if (err) {
             console.log(err);
             console.log(__dirname);

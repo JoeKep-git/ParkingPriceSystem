@@ -1,10 +1,14 @@
 {
+  "name": "petrol-price-system",
+  "version": "1.0.0",
+  "main": "server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
   "dependencies": {
     "axios": "^1.5.1",
+    "bingmaps": "^2.0.3",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "init": "^0.1.2",
