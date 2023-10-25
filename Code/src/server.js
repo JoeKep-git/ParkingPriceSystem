@@ -101,7 +101,7 @@ function getData(url, timeout) {
 }
 
 //Timeout for get requests
-const timeout = 5000; // 5 seconds
+const timeout = 2500; // 2.5 seconds
 
 //GETTING THE DATA FROM THE URLS
 app.get('/data', async (req, res) => {

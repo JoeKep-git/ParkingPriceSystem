@@ -13,16 +13,22 @@ function getMap() {
     fetch('/data').then(response => response.json()).then(data => {
         data.forEach(station => {
             console.log(station);
-            console.log(station.location.latitude);
+            console.log(station.prices);
             var location = new Microsoft.Maps.Location(station.location.latitude,station.location.longitude);
-            var pin = new Microsoft.Maps.Pushpin(location);
+            var pin = new Microsoft.Maps.Pushpin(location, {
+                title: station.brand,
+                subTitle: `Address: ${station.address},
+                E5:${station.prices.E5}, E10:${station.prices.E10}, B7:${station.prices.B7},`,
+                color: 'red'
+            });
 
             //Click event to pushpin
             Microsoft.Maps.Events.addHandler(pin, 'click', function () {
                 infoBox.setOptions({
                     location: location,
-                    title: station.name,
-                    description: station.address
+                    title: station.brand,
+                    description: station.address,
+                    price: station.price,
                 });
                 infoBox.setMap(map)
             });
