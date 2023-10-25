@@ -20,22 +20,16 @@ function getMap() {
             var priceContainer = document.createElement('div');
             //checking if prices are not empty
             if(station.prices.E5 !== undefined) {
-                //creating a paragraph for E5 price
-                // var e5 = document.createElement('p');
+                //adding to the price container for E5 price
                 priceContainer.innerText += `E5: ${station.prices.E5}, `;
-                // priceContainer.appendChild(e5);
             }  
             if(station.prices.E10 !== undefined) {
-                //creating a paragraph for E10 price
-                // var e10 = document.createElement('p');
+                //adding to the price container for E10 price
                 priceContainer.innerText += `E10: ${station.prices.E10}, `;
-                // priceContainer.appendChild(e10);
             }
             if(station.prices.B7 !== undefined) {
-                //creating a paragraph for B7 price
-                // var b7 = document.createElement('p');
+                //adding to the price container for B7 price
                 priceContainer.innerText += `B7: ${station.prices.B7}`;
-                // priceContainer.appendChild(b7);
             }
 
             var pin = new Microsoft.Maps.Pushpin(location, {
