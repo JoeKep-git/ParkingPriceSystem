@@ -12,8 +12,6 @@ function getMap() {
     //GET request for my /data route
     fetch('/data').then(response => response.json()).then(data => {
         data.forEach(station => {
-            console.log(station);
-            console.log(station.prices);
             var location = new Microsoft.Maps.Location(station.location.latitude,station.location.longitude);
 
             //creating a div container to add the prices
