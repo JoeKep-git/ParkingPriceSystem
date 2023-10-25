@@ -15,10 +15,33 @@ function getMap() {
             console.log(station);
             console.log(station.prices);
             var location = new Microsoft.Maps.Location(station.location.latitude,station.location.longitude);
+
+            //creating a div container to add the prices
+            var priceContainer = document.createElement('div');
+            //checking if prices are not empty
+            if(station.prices.E5 !== undefined) {
+                //creating a paragraph for E5 price
+                // var e5 = document.createElement('p');
+                priceContainer.innerText += `E5: ${station.prices.E5}, `;
+                // priceContainer.appendChild(e5);
+            }  
+            if(station.prices.E10 !== undefined) {
+                //creating a paragraph for E10 price
+                // var e10 = document.createElement('p');
+                priceContainer.innerText += `E10: ${station.prices.E10}, `;
+                // priceContainer.appendChild(e10);
+            }
+            if(station.prices.B7 !== undefined) {
+                //creating a paragraph for B7 price
+                // var b7 = document.createElement('p');
+                priceContainer.innerText += `B7: ${station.prices.B7}`;
+                // priceContainer.appendChild(b7);
+            }
+
             var pin = new Microsoft.Maps.Pushpin(location, {
                 title: station.brand,
                 subTitle: `Address: ${station.address},
-                E5:${station.prices.E5}, E10:${station.prices.E10}, B7:${station.prices.B7},`,
+                ${priceContainer.innerHTML}`,
                 color: 'red'
             });
 
@@ -27,25 +50,20 @@ function getMap() {
                 infoBox.setOptions({
                     location: location,
                     title: station.brand,
-                    description: station.address,
-                    price: station.price,
+                    description: `
+                           <div>
+                               <br>Address: ${station.address}</br>
+                               Postcode: ${station.postcode}</p>
+                               <p>Prices:
+                               ${priceContainer.innerHTML}
+                               </p>
+                           </div>
+                       `,
+                    visible: true
                 });
                 infoBox.setMap(map)
             });
             map.entities.push(pin);
         });
     }).catch(err => console.error('Error at: ', err));
-
-    // //Add a clickable spot
-    // const pushpin = new Microsoft.Maps.Pushpin(map.getCenter(), {
-    //     title: 'Clickable Spot',
-    //     subTitle: 'This spot is clickable',
-    //     color: 'red'
-    // });
-
-    // Microsoft.Maps.Events.addHandler(pushpin, 'click', function () {
-    //     alert('Clicked pushpin');
-    // });
-
-    // map.entities.push(pushpin);
 }
