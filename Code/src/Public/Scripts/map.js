@@ -1,16 +1,30 @@
-let map;
+async function getMap() {
 
-function getMap() {
-    //Initialize a map instance.
-    var map = new Microsoft.Maps.Map('#map');
-    var infoBox = new Microsoft.Maps.Infobox(map.getCenter(), {
-        visible: false
-    });
+    //telling user the map is loading
+    var loading = document.createElement('h4');
+    loading.innerText = "Loading Map";
+    var title = document.getElementById('title');
+    console.log(loading);
+    title.appendChild(loading);
 
-    map.entities.push(infoBox);
+    var dots = 0;
+
+    var intervalId = setInterval(function() {
+        dots = (dots + 1) % 4; // Cycle through 0, 1, 2, 3
+
+        loading.innerText = "Loading Map" + ".".repeat(dots);
+    }, 500); // Flash every half second (500 milliseconds)
 
     //GET request for my /data route
     fetch('/data').then(response => response.json()).then(data => {
+        //Initialize a map instance.
+        var map = new Microsoft.Maps.Map('#map');
+        var infoBox = new Microsoft.Maps.Infobox(map.getCenter(), {
+            visible: false
+        });
+
+        map.entities.push(infoBox);
+
         data.forEach(station => {
             var location = new Microsoft.Maps.Location(station.location.latitude,station.location.longitude);
 
@@ -57,5 +71,8 @@ function getMap() {
             });
             map.entities.push(pin);
         });
-    }).catch(err => console.error('Error at: ', err));
+
+        //removing loading message
+        loading.remove();
+    }).catch(err => loading.innerHTML = 'Server Error loading map' && console.error('Error at: ', err));
 }
