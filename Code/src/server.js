@@ -6,6 +6,9 @@ const env = require('dotenv').config();
 const axios = require('axios');
 const request = require('request-promise');
 const zlib = require('zlib');
+const router = express.Router();
+const {body, validationResult} = require('express-validator');
+const exp = require('constants');
 
 //HTTPS Certificates
 const options = {
@@ -18,6 +21,7 @@ const PORT = process.env.PORT || 8000;
 
 //Serving static files
 app.use(express.static(__dirname+'/Public'));
+app.use(express.json());
 
 //GETTING THE MAIN PAGE
 app.get('/', (req, res) => {
@@ -32,7 +36,6 @@ app.get('/', (req, res) => {
     });
 });
 
-//TODO: try and get the bing api to work on backend and then send the data to the frontend
 /**
  *  Applegreen UK	https://applegreenstores.com/fuel-prices/data.json
     Ascona Group	https://fuelprices.asconagroup.co.uk/newfuel.json
@@ -101,7 +104,7 @@ function getData(url, timeout) {
 }
 
 //Timeout for get requests
-const timeout = 1000; // 1 seconds
+const timeout = 1500; // 1.5 seconds
 
 //GETTING THE DATA FROM THE URLS
 app.get('/data', async (req, res) => {
@@ -128,6 +131,41 @@ app.get('/data', async (req, res) => {
     }
 
     res.json(responseData);
+});
+
+//using an array of validation checks for the postcode and radius fields.
+app.post('/search', [
+    body('postcode').isPostalCode('GB').withMessage('Invalid Postcode'), //body('fieldname') specifies which field we're validating. .isPostalCode() checks if the field value is a valid postal code.
+    body('radius').isFloat({min: 0, max: 100}).withMessage('Radius must be between 1 and 20 kilometers') //.isFloat({ min: 1, max: 20 }) checks if the field value is a float within the specified range.
+], (req, res) => {
+    console.log(req.body);
+    const errors = validationResult(req);
+
+    if(!errors.isEmpty()) {
+        return res.status(422).json({error: 'Invalid postcode or radius'});
+    }
+
+    const postcode = req.body.postcode;
+    const radius = parseFloat(req.body.radius);
+
+    //using openstreetmap to get the long and lat of the postcode
+    axios.get(`https://nominatim.openstreetmap.org/search?q=${postcode}&format=json`)
+        .then(response => {
+            const data = response.data;
+            if (data.length > 0) {
+                const centerLat = parseFloat(data[0].lat);
+                const centerLon = parseFloat(data[0].lon);
+
+                //success status and send centerLat, centerLon and radius back to the client
+                res.status(200).json({centerLat: centerLat, centerLon: centerLon, radius: radius});
+            } else {
+                res.status(404).json({ error: 'Could not retrieve coordinates for the provided postcode.' });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        });
 });
 
 //create HTTPS server

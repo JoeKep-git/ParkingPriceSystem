@@ -23,6 +23,11 @@ async function getMap() {
             visible: false
         });
 
+        //showing the search by postcode button and input
+        document.getElementById('searchByPostcodeButton').style.display = 'block';
+        document.getElementById('radiusInput').style.display = 'block';
+        document.getElementById('postcodeInput').style.display = 'block';
+
         map.entities.push(infoBox);
 
         data.forEach(station => {
@@ -104,7 +109,6 @@ async function getMapPostCode(centerLat, centerLon, radius) {
         var infoBox = new Microsoft.Maps.Infobox(map.getCenter(), {
             visible: false
         });
-        console.log("testing?: " + pointsWithinRadius);
         map.entities.push(infoBox);
 
         pointsWithinRadius.forEach(station => {
@@ -158,38 +162,36 @@ async function getMapPostCode(centerLat, centerLon, radius) {
         loading.remove();
     }).catch(err => loading.innerHTML = 'Server Error loading map' && console.error('Error at: ', err));
 }
+/**********************Calculating the long and lat of postcode and radius*************************** */
 
 function searchByPostcode() {
     var postcode = document.getElementById('postcodeInput').value;
     var radius = parseFloat(document.getElementById('radiusInput').value);
-    // Check if postcode is a valid postcode format
-    var postcodeRegex = /^[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}$/i;
-    if (!postcodeRegex.test(postcode)) {
-        alert('Please enter a valid postcode.');
-        return;
-    }
 
-    // Check if radius is within acceptable range (max 20 kilometers)
-    if (isNaN(radius) || radius <= 0 || radius > 20) {
-        alert('Please enter a valid radius between 1 and 20 kilometers.');
-        return;
-    }
-
-    fetch(`https://nominatim.openstreetmap.org/search?q=${postcode}&format=json`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.length > 0) {
-            const centerLat = parseFloat(data[0].lat);
-            const centerLon = parseFloat(data[0].lon);
-
-            // Call getMap with the new center coordinates and filtered points
-            getMapPostCode(centerLat, centerLon, radius);
-        } else {
-            alert('Could not retrieve coordinates for the provided postcode.');
-        }
+    fetch('/search', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ postcode, radius })
     })
-    .catch(error => console.error('Error:', error));
+    .then(response => {
+        if (!response.ok) {
+            //returning the error message from the server with a rejected promise causing and error to be thrown
+            return response.json().then(errorData => Promise.reject(errorData.error));
+        }
+        return response.json();
+    })
+    .then(data => {
+        const { centerLat, centerLon, radius } = data;
+        getMapPostCode(centerLat, centerLon, radius);
+    })
+    .catch(error => {
+        console.error('Error:', error),
+        alert('An error occurred ' + error);    
+    });
 }
+
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // Radius of the Earth in kilometers
@@ -217,3 +219,5 @@ function findPointsWithinRadius(centerLat, centerLon, radius, points) {
 
     return result;
 }
+
+/****************************End******************************************************************* */
