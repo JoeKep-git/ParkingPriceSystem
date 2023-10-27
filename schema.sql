@@ -1,0 +1,8 @@
+CREATE TABLE users(
+  userId INT PRIMARY KEY NOT NULL IDENTITY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  password VARCHAR(1000) NOT NULL,
+  favouriteFuel VARCHAR(10),
+  favouriteStation VARCHAR(500),
+  QRSecret VARCHAR(1000)
+);

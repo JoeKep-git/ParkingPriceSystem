@@ -67,6 +67,18 @@ app.get('/login', (req, res) => {
     });
 });
 
+app.get('/signup', (req, res) => {
+    fs.readFile(__dirname+'/Public/HTML/Signup.html', 'utf8', (err, data) => {
+    if (err) {
+            console.log(err);
+            console.log(__dirname);
+            console.log(__dirname+"/HTML/Signup.html");
+            res.status(500).send('Internal Server Error');
+        }
+        res.send(data);
+    });
+})
+
 //Post method to handle login
 
 /**
