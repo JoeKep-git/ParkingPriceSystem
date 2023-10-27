@@ -23,6 +23,20 @@ const options = {
 //SERVER PORT
 const PORT = process.env.PORT || 8000;
 
+//Sql server config
+const sqlConfig = {
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    server: process.env.DB_SERVER,
+    database: process.env.DB_DATABASE,
+    options: {
+        encrypt: true,
+        enableArithAbort: true,
+        trustedConnection: true,
+        trustedServerCertificate: true
+    }
+};
+
 //Serving static files
 app.use(express.static(__dirname+'/Public'));
 app.use(express.json());
