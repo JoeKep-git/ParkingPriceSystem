@@ -205,3 +205,5 @@ app.post('/search', [
 const server = https.createServer(options, app).listen(PORT, () => {
     console.log('Server running on port ' + PORT);
 });
+
+module.exports = {app, server};
