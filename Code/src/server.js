@@ -9,6 +9,10 @@ const zlib = require('zlib');
 const router = express.Router();
 const {body, validationResult} = require('express-validator');
 const exp = require('constants');
+//Sql server
+const sql = require('mssql');
+//Hashing algorithm
+const bcrypt = require('bcrypt');
 
 //HTTPS Certificates
 const options = {
@@ -35,6 +39,21 @@ app.get('/', (req, res) => {
         res.send(data);
     });
 });
+
+//Getting the login page
+app.get('/login', (req, res) => {
+    fs.readFile(__dirname+'/Public/HTML/Login.html', 'utf8', (err, data) => {
+    if (err) {
+            console.log(err);
+            console.log(__dirname);
+            console.log(__dirname+"/HTML/Login.html");
+            res.status(500).send('Internal Server Error');
+        }
+        res.send(data);
+    });
+});
+
+//Post method to handle login
 
 /**
  *  Applegreen UK	https://applegreenstores.com/fuel-prices/data.json
