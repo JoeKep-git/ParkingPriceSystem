@@ -9,10 +9,12 @@ const zlib = require('zlib');
 const router = express.Router();
 const {body, validationResult} = require('express-validator');
 const exp = require('constants');
+const bodyParser = require('body-parser');
 //Sql server
 const sql = require('mssql');
 //Hashing algorithm
 const bcrypt = require('bcrypt');
+
 
 //HTTPS Certificates
 const options = {
@@ -21,25 +23,25 @@ const options = {
 }
 
 //SERVER PORT
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT;
 
 //Sql server config
 const sqlConfig = {
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     server: process.env.DB_SERVER,
-    database: process.env.DB_DATABASE,
+    database: process.env.DB_NAME,
     options: {
-        encrypt: true,
+        encrypt: false,
         enableArithAbort: true,
         trustedConnection: true,
         trustedServerCertificate: true
     }
 };
 
-//Serving static files
-app.use(express.static(__dirname+'/Public'));
+app.use(express.static(__dirname+'/Public')); //Serving static files
 app.use(express.json());
+app.use(bodyParser.urlencoded({extended: true}));
 
 //GETTING THE MAIN PAGE
 app.get('/', (req, res) => {
@@ -79,7 +81,46 @@ app.get('/signup', (req, res) => {
     });
 })
 
-//Post method to handle login
+//Post method to handle register
+app.post('/signup', async (req, res) => {
+
+    //Hashing the password
+    if (req.body.password !== req.body.confirmPassword) {
+        res.status(400).send('Passwords do not match');
+        return;
+    }
+
+    bcrypt.hash(req.body.password, 10, (err, hash) => {
+        if (err) {
+            console.log(err);
+            res.status(500).send('Please try a different username or password');
+            return;
+        }
+        //Connecting to the database
+        sql.connect(sqlConfig, (err) => {
+            if (err) {
+                console.log(err);
+                res.status(500).send('Internal Server Error');
+                return;
+            }
+            //Creating a request object
+            const request = new sql.Request();
+
+            // Use parameterized query to prevent SQL injection
+            request.input('username', sql.VarChar, req.body.username);
+            request.input('password', sql.VarChar, hash);
+            request.query('INSERT INTO users (username, password) VALUES (@username, @password)', (err, result) => {
+                if (err) {
+                    console.log(err);
+                    res.status(500).send('Please try a different username or password');
+                    return;
+                }
+                //Sending a success message
+                res.status(200).redirect('/login');
+            });
+        });
+    });
+});
 
 /**
  *  Applegreen UK	https://applegreenstores.com/fuel-prices/data.json
