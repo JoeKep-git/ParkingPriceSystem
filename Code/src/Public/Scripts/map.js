@@ -68,6 +68,7 @@ async function getMap() {
                                <p>Prices:
                                ${priceContainer.innerHTML}
                                </p>
+                               <button onclick="openDirections('${station.address}, ${station.postcode}')">Get Directions</button>
                            </div>
                        `,
                     visible: true
@@ -149,6 +150,7 @@ async function getMapPostCode(centerLat, centerLon, radius) {
                                <p>Prices:
                                ${priceContainer.innerHTML}
                                </p>
+                               <button onclick="openDirections('${station.address}, ${station.postcode}')">Get Directions</button>
                            </div>
                        `,
                     visible: true
@@ -221,3 +223,12 @@ function findPointsWithinRadius(centerLat, centerLon, radius, points) {
 }
 
 /****************************End******************************************************************* */
+
+//open directions
+function openDirections(address) {
+    // Use the Bing Maps API to open directions
+    navigator.geolocation.getCurrentPosition(function(position) {
+        var url = `https://www.bing.com/maps?rtp=pos.${position.coords.latitude}_${position.coords.longitude}~pos.${encodeURIComponent(address)}&key=ApXX9iOE9c3LpsdUBeX9eiWaaPhbdEpSzlAM3uwFsspQocDgyW1eE9xXFyYZlfmM`;
+        window.open(url, '_blank');
+    });
+}
