@@ -150,7 +150,7 @@ async function getMapPostCode(centerLat, centerLon, radius) {
                                <p>Prices:
                                ${priceContainer.innerHTML}
                                </p>
-                               <button onclick="openDirections('${station.address}, ${station.postcode}')">Get Directions</button>
+                               <button onclick="openDirections('${station.address}')">Get Directions</button>
                            </div>
                        `,
                     visible: true
