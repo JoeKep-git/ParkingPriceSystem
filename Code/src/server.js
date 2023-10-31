@@ -55,6 +55,15 @@ app.use(session({
         sameSite: 'strict'} // cookie will only be sent for requests with the same site
 }));
 
+//redirects back to main page when logged in and function called
+function alreadyLoggedIn(req, res, next) {
+    if (req.session.isLoggedIn) {
+        res.send('<script>alert("Cannot access this page while logged in");</script>').redirect('/');
+    } else {
+        next();
+    }
+}
+
 //GETTING THE MAIN PAGE
 app.get('/', (req, res) => {
     fs.readFile(__dirname+'/Public/HTML/Main.html', 'utf8', (err, data) => {
@@ -64,12 +73,22 @@ app.get('/', (req, res) => {
             console.log(__dirname+"/HTML/Main.html");
             res.status(500).send('Internal Server Error');
         }
+        
+        // Get session data
+        // If the user is logged in, isLoggedIn will be true, otherwise it will be false
+        const isLoggedIn = req.session.isLoggedIn;
+        const username = req.session.user ? req.session.user.username : '';
+
+        // Add session data to the HTML
+        data = data.replace('<!--#isLoggedIn#-->', isLoggedIn);
+        data = data.replace('<!--#username#-->', username);
+
         res.send(data);
     });
 });
 
 //Getting the login page
-app.get('/login', (req, res) => {
+app.get('/login', alreadyLoggedIn, (req, res) => {
     fs.readFile(__dirname+'/Public/HTML/Login.html', 'utf8', (err, data) => {
     if (err) {
             console.log(err);
@@ -81,7 +100,7 @@ app.get('/login', (req, res) => {
     });
 });
 
-app.get('/signup', (req, res) => {
+app.get('/signup', alreadyLoggedIn, (req, res) => {
     fs.readFile(__dirname+'/Public/HTML/Signup.html', 'utf8', (err, data) => {
     if (err) {
             console.log(err);
@@ -201,8 +220,8 @@ app.post('/login', async (req, res) => {
             //setting the session variables
             req.session.isLoggedIn = true;
             req.session.user = { username: user.username };
-
-            res.redirect('/');
+            console.log(req.session.user);
+            res.status(200).redirect('/');
         } else {
             res.status(401).send('<script>alert("Invalid credentials"); window.location="/login";</script>'); //sends an error and alert that the credentials are invalid and redirects back to login page
         }
@@ -212,6 +231,11 @@ app.post('/login', async (req, res) => {
     } finally {
         await sql.close();
     }
+});
+
+app.post('/logout', (req, res) => {
+    req.session.destroy();
+    res.status(200);
 });
 
 /**
@@ -344,6 +368,12 @@ app.post('/search', [
             console.error('Error:', error);
             res.status(500).json({ error: 'Internal Server Error' });
         });
+});
+
+//handle 404 errors
+//must be at the bottom of the file
+app.use((req, res, next) => {
+    res.status(404).sendFile(__dirname+'/Public/HTML/404.html');
 });
 
 //create HTTPS server

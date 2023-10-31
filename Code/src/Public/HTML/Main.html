@@ -19,9 +19,11 @@
             <div class="collapse navbar-collapse" id="navbarNavDropdown">
                 <ul class="navbar-nav ms-auto"> <!-- Align right with ms-auto -->
                     <!-- Check if user is logged in -->
-                    <script>
-                        if (sessionStorage.getItem('isLoggedIn') === 'true') {
-                            const username = sessionStorage.getItem('username');
+                    <script defer>
+                        const isLoggedIn = '<!--#isLoggedIn#-->';
+                        const username = '<!--#username#-->';
+                        console.log(isLoggedIn);
+                        if (isLoggedIn != 'undefined') {
                             document.write(`
                                 <li class="nav-item">
                                     <a class="nav-link active" aria-current="page" href="/">Home</a>
@@ -34,7 +36,7 @@
                                         Profile
                                     </a>
                                     <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                                        <li><a class="dropdown-item" href="#">Logout</a></li>
+                                        <li><a class="dropdown-item" onclick="logout()" href="">Logout</a></li>
                                     </ul>
                                 </li>
                             `);
@@ -50,6 +52,25 @@
                                     <a class="nav-link" href="/signup">Sign Up</a>
                                 </li>
                             `);
+                        }
+
+                        function logout() {
+                            fetch('/logout', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(data => {
+                                if (data.success) {
+                                // Redirect after successful logout
+                                window.location = '/';
+                                console.log(data);
+                                } else {
+                                    alert('Logout failed');
+                                }
+                            }).catch(err => {
+                                console.log(err);
+                            })
                         }
                     </script>
                 </ul>
