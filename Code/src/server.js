@@ -81,44 +81,102 @@ app.get('/signup', (req, res) => {
     });
 })
 
+//Function to check if the users new password is vulnerable by using pwned password API to check if the password has been leaked before
+async function checkPassword(password) {
+    const sha1Hash = require('crypto').createHash('sha1').update(password).digest('hex').toUpperCase();
+    const prefix = sha1Hash.slice(0, 5);
+    const suffix = sha1Hash.slice(5);
+
+    try {
+        //getting the pwned password api to check hashed password
+        const response = await axios.get(`https://api.pwnedpasswords.com/range/${prefix}`);
+        const hashes = response.data.split('\n');
+
+        for (const hash of hashes) {
+            const [hashSuffix, count] = hash.split(':');
+            if (hashSuffix === suffix) {
+                return parseInt(count, 10);
+            }
+        }
+
+        return 0; // Password not found in breaches
+    } catch (error) {
+        throw error;
+    }
+}
+
+// // Example usage
+// checkPassword('password123').then(count => {
+//     if (count > 0) {
+//         console.log(`This password has been exposed in ${count} breaches.`);
+//     } else {
+//         console.log('This password has not been exposed in any known breaches.');
+//     }
+// }).catch(error => {
+//     console.error(error);
+// });
+
+
 //Post method to handle register
 app.post('/signup', async (req, res) => {
 
-    //Hashing the password
+    console.log(req.body);
+    //recaptcha response
+    const captcha = req.body['g-recaptcha-response'];
+    console.log('This is the captcha: ' + captcha);
+
+    //Checking if the password is the same as the confirm password
     if (req.body.password !== req.body.confirmPassword) {
         res.status(400).send('Passwords do not match');
         return;
     }
 
-    bcrypt.hash(req.body.password, 10, (err, hash) => {
-        if (err) {
-            console.log(err);
-            res.status(500).send('Please try a different username or password');
-            return;
-        }
-        //Connecting to the database
-        sql.connect(sqlConfig, (err) => {
-            if (err) {
-                console.log(err);
-                res.status(500).send('Internal Server Error');
-                return;
-            }
-            //Creating a request object
-            const request = new sql.Request();
-
-            // Use parameterized query to prevent SQL injection
-            request.input('username', sql.VarChar, req.body.username);
-            request.input('password', sql.VarChar, hash);
-            request.query('INSERT INTO users (username, password) VALUES (@username, @password)', (err, result) => {
+    if (!captcha) {
+        return res.status(400).send('reCAPTCHA not completed');
+    }
+    
+    //Checking if the password is vulnerable
+    //This is asynchronous so we need to have the rest of the code in the .then() method
+    checkPassword(req.body.password).then(count => {
+        if (count > 0) {
+            console.log(`This password has been exposed in ${count} breaches.`);
+            return res.status(400).send('This password has been exposed in a data breach. Please try a different password.');
+        } else {
+            console.log('This password has not been exposed in any known breaches.');
+                //Hashing password
+            bcrypt.hash(req.body.password, 10, (err, hash) => {
                 if (err) {
                     console.log(err);
                     res.status(500).send('Please try a different username or password');
                     return;
                 }
-                //Sending a success message
-                res.status(200).redirect('/login');
+                //Connecting to the database
+                sql.connect(sqlConfig, (err) => {
+                    if (err) {
+                        console.log(err);
+                        res.status(500).send('Internal Server Error');
+                        return;
+                    }
+                    //Creating a request object
+                    const request = new sql.Request();
+
+                    // Use parameterized query to prevent SQL injection
+                    request.input('username', sql.VarChar, req.body.username);
+                    request.input('password', sql.VarChar, hash);
+                    request.query('INSERT INTO users (username, password) VALUES (@username, @password)', (err, result) => {
+                        if (err) {
+                            console.log(err);
+                            res.status(500).send('Please try a different username or password');
+                            return;
+                        }
+                        //Sending a success message
+                        res.status(200).redirect('/login');
+                    });
+                });
             });
-        });
+        }
+    }).catch(error => {
+        console.error(error);
     });
 });
 
