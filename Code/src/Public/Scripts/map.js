@@ -24,9 +24,9 @@ async function getMap() {
         });
 
         //showing the search by postcode button and input
-        document.getElementById('searchByPostcodeButton').style.display = 'block';
-        document.getElementById('radiusInput').style.display = 'block';
-        document.getElementById('postcodeInput').style.display = 'block';
+        document.getElementById('searchByPostcodeButton').style.display = 'inline';
+        document.getElementById('radiusInput').style.display = 'inline';
+        document.getElementById('postcodeInput').style.display = 'inline';
 
         map.entities.push(infoBox);
 
