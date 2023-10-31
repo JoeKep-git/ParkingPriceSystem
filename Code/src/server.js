@@ -10,6 +10,7 @@ const router = express.Router();
 const {body, validationResult} = require('express-validator');
 const exp = require('constants');
 const bodyParser = require('body-parser');
+const session = require('express-session');
 //Sql server
 const sql = require('mssql');
 //Hashing algorithm
@@ -42,6 +43,17 @@ const sqlConfig = {
 app.use(express.static(__dirname+'/Public')); //Serving static files
 app.use(express.json());
 app.use(bodyParser.urlencoded({extended: true}));
+
+app.use(session({
+    secret: process.env.SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 300000,     //5 Minutes in milliseconds
+        httpOnly: true,     //cookie is not accessible via client side script
+        secure: true,       // cookie will only be sent over HTTPS
+        sameSite: 'strict'} // cookie will only be sent for requests with the same site
+}));
 
 //GETTING THE MAIN PAGE
 app.get('/', (req, res) => {
@@ -166,6 +178,40 @@ app.post('/signup', async (req, res) => {
     }).catch(error => {
         console.error(error);
     });
+});
+
+// Post method to handle login
+app.post('/login', async (req, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
+
+    try {
+        await sql.connect(sqlConfig);
+
+        const request = new sql.Request();
+        request.input('username', sql.NVarChar, username); 
+
+        //query to find the user with the username
+        const result = await request.query(`SELECT * FROM Users WHERE username = @username`);
+
+        const user = result.recordset[0];
+
+        //checks if the password matches the hashed password in the database of the user and if their is a user with that username
+        if (user && await bcrypt.compare(password, user.password)) {
+            //setting the session variables
+            req.session.isLoggedIn = true;
+            req.session.user = { username: user.username };
+
+            res.redirect('/');
+        } else {
+            res.status(401).send('<script>alert("Invalid credentials"); window.location="/login";</script>'); //sends an error and alert that the credentials are invalid and redirects back to login page
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Internal Server Error');
+    } finally {
+        await sql.close();
+    }
 });
 
 /**
