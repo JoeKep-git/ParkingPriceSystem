@@ -58,7 +58,7 @@ app.use(session({
 //redirects back to main page when logged in and function called
 function alreadyLoggedIn(req, res, next) {
     if (req.session.isLoggedIn) {
-        res.send('<script>alert("Cannot access this page while logged in");</script>').redirect('/');
+        res.send('<script>alert("Cannot access this page while logged in"); window.location.href="/"</script>');
     } else {
         next();
     }
