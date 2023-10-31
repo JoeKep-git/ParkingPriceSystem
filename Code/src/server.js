@@ -105,18 +105,6 @@ async function checkPassword(password) {
     }
 }
 
-// // Example usage
-// checkPassword('password123').then(count => {
-//     if (count > 0) {
-//         console.log(`This password has been exposed in ${count} breaches.`);
-//     } else {
-//         console.log('This password has not been exposed in any known breaches.');
-//     }
-// }).catch(error => {
-//     console.error(error);
-// });
-
-
 //Post method to handle register
 app.post('/signup', async (req, res) => {
 
