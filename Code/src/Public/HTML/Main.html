@@ -22,7 +22,6 @@
                     <script defer>
                         const isLoggedIn = '<!--#isLoggedIn#-->';
                         const username = '<!--#username#-->';
-                        console.log(isLoggedIn);
                         if (isLoggedIn != 'undefined') {
                             document.write(`
                                 <li class="nav-item">
@@ -36,6 +35,7 @@
                                         Profile
                                     </a>
                                     <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                        <li><a class="dropdown-item" href="/settings">Settings</a></li>
                                         <li><a class="dropdown-item" onclick="logout()" href="">Logout</a></li>
                                     </ul>
                                 </li>

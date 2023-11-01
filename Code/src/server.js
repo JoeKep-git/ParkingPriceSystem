@@ -64,6 +64,16 @@ function alreadyLoggedIn(req, res, next) {
     }
 }
 
+//function that checks if user is logged in and allows them to go on this page
+function allowLoggedIn(req, res, next) {
+    if (req.session.isLoggedIn) {
+        next();
+    }
+    else {
+        res.send('<script>alert("You must be logged in to access this page"); window.location.href="/login"</script>');
+    }
+}
+
 //GETTING THE MAIN PAGE
 app.get('/', (req, res) => {
     fs.readFile(__dirname+'/Public/HTML/Main.html', 'utf8', (err, data) => {
@@ -100,6 +110,7 @@ app.get('/login', alreadyLoggedIn, (req, res) => {
     });
 });
 
+//Getting the signup page
 app.get('/signup', alreadyLoggedIn, (req, res) => {
     fs.readFile(__dirname+'/Public/HTML/Signup.html', 'utf8', (err, data) => {
     if (err) {
@@ -108,9 +119,69 @@ app.get('/signup', alreadyLoggedIn, (req, res) => {
             console.log(__dirname+"/HTML/Signup.html");
             res.status(500).send('Internal Server Error');
         }
+        
         res.send(data);
     });
 })
+
+//Getting the profile settings page
+app.get('/settings', allowLoggedIn, (req, res) => {
+    fs.readFile(__dirname+'/Public/HTML/Settings.html', 'utf8', (err, data) => {
+        if(err) {
+            console.log(err);
+            console.log(__dirname);
+            console.log(__dirname+"/HTML/Settings.html");
+            res.status(500).send('Internal Server Error');
+        }
+
+        // Get session data
+        // If the user is logged in, isLoggedIn will be true, otherwise it will be false
+        const isLoggedIn = req.session.isLoggedIn;
+        const username = req.session.user ? req.session.user.username : '';
+
+        // Add session data to the HTML
+        data = data.replace('<!--#isLoggedIn#-->', isLoggedIn);
+        data = data.replace('<!--#username#-->', username);
+
+        res.send(data);
+    });
+});
+
+//Delete account
+app.post('/deleteAccount', allowLoggedIn, async (req, res) => {
+
+    const username = req.session.user.username;
+    const password = req.body.password;
+    console.log(req.body);
+    console.log(req.session.user.username);
+    //try catch to catch any errors
+    try {
+        const pool = await sql.connect(sqlConfig);
+        const request = pool.request();
+
+        // Use parameterized query to prevent SQL injection
+        request.input('username', sql.VarChar, username);
+
+        // First, check if the entered password matches the one in the database
+        const result = await request.query('SELECT * FROM users WHERE username = @username');
+        const user = result.recordset[0];
+
+        if (user && await bcrypt.compare(password, user.password)) {
+            // Passwords match, proceed with account deletion
+            const deleteRequest = pool.request();
+            deleteRequest.input('username', sql.VarChar, username);
+
+            await deleteRequest.query('DELETE FROM users WHERE username = @username');
+            req.session.destroy();
+            res.status(200).redirect('/'); // Redirect to logout or another appropriate page
+        } else {
+            res.status(401).send('Invalid password');
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Internal Server Error');
+    }
+});
 
 //Function to check if the users new password is vulnerable by using pwned password API to check if the password has been leaked before
 async function checkPassword(password) {
