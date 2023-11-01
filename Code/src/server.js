@@ -18,11 +18,38 @@ const bcrypt = require('bcrypt');
 //For 2fa
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
+//For encryption
+const crypto = require('crypto');
+
 
 //HTTPS Certificates
 const options = {
     key: fs.readFileSync(__dirname+'/Certificates/server.key'),
     cert: fs.readFileSync(__dirname+'/Certificates/server.crt')
+}
+// function generateSecretKey() {
+//     return crypto.randomBytes(32).toString('hex'); // Generates a random 256-bit (32-byte) key and converts it to hexadecimal
+// }
+// const secretKey = generateSecretKey();
+
+//Copy and paste result into encryption secret key in .env file
+// console.log('Generated Secret Key:', generateSecretKey());
+
+
+// Function to encrypt data using AES
+function encrypt(text, secretKey) {
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(secretKey, 'hex'), Buffer.from(process.env.EIV, 'hex'));
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted.toString('hex');
+}
+
+// Function to decrypt data using AES
+function decrypt(encryptedData, secretKey) {
+    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(secretKey, 'hex'), Buffer.from(process.env.EIV, 'hex'));
+    let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted.toString();
 }
 
 //SERVER PORT
@@ -182,6 +209,8 @@ app.post('/deleteAccount', allowLoggedIn, async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).send('Internal Server Error');
+    } finally {
+        await sql.close();
     }
 });
 
@@ -231,47 +260,132 @@ app.post('/changePassword', allowLoggedIn, async (req, res) => {
 });
 
 //Generate qr code for 2fa
-// Inside your route handler for setting up 2FA
 app.post('/setup2FA', allowLoggedIn, (req, res) => {
-    // Generate a new secret
-    const secret = speakeasy.generateSecret();
+    const username = req.session.user.username;
 
-    // Create a data URI for the QR code
-    QRCode.toDataURL(secret.otpauth_url, (err, data_url) => {
+    // Check if user already has a QR secret stored in the database
+    sql.connect(sqlConfig, (err) => {
         if (err) {
-            console.error(err);
-            res.status(500).send(`<script>alert("Internal Server Error"); window.location.href="/settings"</script>`);
-            return;
+            console.log(err);
+            return res.status(500).json({success: false, error: 'Internal Server Error', url: '/settings'});
         }
 
-        // Send the data URL to the client
-        res.json({ secret: secret.base32, qrcode: data_url });
+        const request = new sql.Request();
+
+        request.input('username', sql.VarChar, username);
+        request.query('SELECT qrsecret FROM users WHERE username = @username', (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).json('Internal Server Error');
+            }
+
+            if (result.recordset.length > 0 && result.recordset[0].qrsecret) {
+                return res.status(400).json({success: false, error: 'QR already exists for user', url: '/settings'});
+            }
+
+            // Generate a new secret
+            const secret = speakeasy.generateSecret();
+
+            // Create a data URI for the QR code
+            QRCode.toDataURL(secret.otpauth_url, (err, data_url) => {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).json({success: false, error: 'Internal Server Error', url: '/settings'});
+                }
+
+                // Send the data URL to the client
+                res.json({ secret: secret.base32, qrcode: data_url });
+            });
+        });
     });
 });
 
-//verify 2fa
-app.post('/submit2FACode', allowLoggedIn, (req, res) => {
+
+//create 2fa
+app.post('/create2FA', allowLoggedIn, (req, res) => {
     const userSubmittedCode = req.body.userSubmittedCode;
     const userSecret = req.body.userSecret;
 
+    console.log(req.body);
+    console.log(userSecret + ' ' + userSubmittedCode);
     // Verify the submitted code
     const isValid = speakeasy.totp.verify({
         secret: userSecret,
         encoding: 'base32',
         token: userSubmittedCode
     });
-
+    console.log(isValid);
     if (isValid) {
         // Code is valid, save userSecret to the database
-        // Make sure to encrypt it before saving
-        // ...
-        res.json({ success: true });
+        const encryptedSecret = encrypt(userSecret, process.env.ENCRYPTION_SECRET);
+       
+        sql.connect(sqlConfig, (err) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Internal Server Error');
+            }
+
+            const request = new sql.Request();
+
+            request.input('username', sql.VarChar, req.session.user.username);
+            request.input('qrsecret', sql.VarChar, encryptedSecret);
+
+            request.query('UPDATE users SET qrsecret = @qrsecret WHERE username = @username', (err, result) => {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).send('Internal Server Error');
+                } else {
+                    return res.json({ success: true });
+                }
+            });
+        });
     } else {
         res.json({ success: false, error: 'Invalid 2FA code' });
     }
 });
 
+app.post('/verify2FA', allowLoggedIn, (req, res) => {
+    const userSubmittedCode = req.body.userSubmittedCode;
 
+    sql.connect(sqlConfig, (err) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Internal Server Error');
+        }
+
+        const request = new sql.Request();
+
+        request.input('username', sql.VarChar, req.session.user.username);
+        request.query('SELECT qrsecret FROM users WHERE username = @username', (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Internal Server Error');
+            }
+
+            if (result.recordset.length > 0 && result.recordset[0].qrsecret) {
+                const encryptedSecret = result.recordset[0].qrsecret;
+                const decryptedSecret = decrypt(encryptedSecret, process.env.ENCRYPTION_SECRET);
+
+                const isValid = speakeasy.totp.verify({
+                    secret: decryptedSecret,
+                    encoding: 'base32',
+                    token: userSubmittedCode
+                });
+
+                if (isValid) {
+                    // Code is valid
+                    req.session.is2FAVerified = true;
+                    res.json({ success: true });
+                } else {
+                    res.json({ success: false, error: 'Invalid 2FA code' });
+                }
+            } else {
+                sql.close();
+                res.json({ success: false, error: '2FA is not set up for this account' });
+            }
+        });
+    });
+});
 
 //Function to check if the users new password is vulnerable by using pwned password API to check if the password has been leaked before
 async function checkPassword(password) {
@@ -346,6 +460,7 @@ app.post('/signup', async (req, res) => {
                     request.query('INSERT INTO users (username, password) VALUES (@username, @password)', (err, result) => {
                         if (err) {
                             console.log(err);
+                            sql.close();
                             res.status(500).send('Please try a different username or password');
                             return;
                         }

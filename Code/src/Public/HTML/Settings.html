@@ -80,6 +80,8 @@
                         <img id="qrcodeImage" src="" alt="QR Code"><br>
                         <label for="2faSecretKey">2FA Secret Key:</label>
                         <p class="modal-content" id="2faSecretKey" style="word-break: break-all;"></p>
+                        <label for="2faCode">2FA Code:</label>
+                        <input type="text" id="2faCode" class="form-control" required>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -141,7 +143,7 @@
         //Qr code setup
         const setup2FABtn = document.getElementById('setup2FABtn');
         const qrcodeImage = document.getElementById('qrcodeImage');
-        const secretKeyInput = document.getElementById('2faSecretKey');
+        const secretKey = document.getElementById('2faSecretKey');
 
         setup2FABtn.addEventListener('click', function() {
             // Make a request to the server to generate a new 2FA secret and get the QR code data URL
@@ -153,15 +155,46 @@
             })
             .then(response => response.json())
             .then(data => {
+                if(!data.success)
+                {
+                    alert(data.error);
+                    window.location.href = data.url;
+                }
+                console.log(data);
                 // Set the QR code image source
                 qrcodeImage.src = data.qrcode;
 
-                // Set the 2FA secret in the input field
-                secretKeyInput.textContent = data.secret
+                // Set the 2FA secret in the field
+                secretKey.textContent = data.secret
+            })
+            .catch(error => {
+                console.error('Error:', error + ' ' + 'hello');
+                alert('An error occurred while setting up 2FA. Please try again later.');
+            });
+        });
 
-                // // Show the modal
-                // const setup2FAModal = new bootstrap.Modal(document.getElementById('setup2FAModal'));
-                // setup2FAModal.show();
+        const confirmSetup2FABtn = document.getElementById('confirmSetup2FA');
+
+        confirmSetup2FABtn.addEventListener('click', function() {
+            const userSubmittedCode = document.getElementById('2faCode').value;
+            const userSecret = document.getElementById('2faSecretKey').textContent;
+
+            // Make a POST request to submit the 2FA code
+            fetch('/create2FA', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userSubmittedCode, userSecret })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('2FA setup successful');
+                    window.location.href = '/'; // Redirect to homepage or desired location
+                } else {
+                    alert('Failed to set up 2FA. Please check your code.');
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
