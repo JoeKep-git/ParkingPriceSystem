@@ -183,6 +183,51 @@ app.post('/deleteAccount', allowLoggedIn, async (req, res) => {
     }
 });
 
+//Change password
+app.post('/changePassword', allowLoggedIn, async (req, res) => {
+    const username = req.session.user.username;
+    const currentPassword = req.body.currentPassword;
+    const newPassword = req.body.newPassword;
+
+    //try catch to catch any errors
+    try {
+        const pool = await sql.connect(sqlConfig);
+        const request = pool.request();
+
+        // Use parameterized query to prevent SQL injection
+        request.input('username', sql.VarChar, username);
+
+        // First, check if the entered password matches the one in the database
+        const result = await request.query('SELECT * FROM users WHERE username = @username');
+        const user = result.recordset[0];
+
+        //checks if the current password matches the one in the database
+        if (user && await bcrypt.compare(currentPassword, user.password)) {
+            // Passwords match, proceed with password change
+            bcrypt.hash(newPassword, 10, async (err, hash) => {
+                if (err) {
+                    console.log(err);
+                    res.status(500).send(`<script>alert("Internal Server Error"); window.location.href="/settings"</script>`);
+                    return;
+                }
+
+                const changeRequest = pool.request();
+                changeRequest.input('username', sql.VarChar, username);
+                changeRequest.input('password', sql.VarChar, hash);
+
+                await changeRequest.query('UPDATE users SET password = @password WHERE username = @username');
+                req.session.destroy();
+                res.status(200).send(`<script>alert("Password changed successfully. Please log in again."); window.location.href="/login"</script>`);
+            });
+        } else {
+            res.status(401).send(`<script>alert("Invalid password"); window.location.href="/settings"</script>`);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send(`<script>alert("Internal Server Error"); window.location.href="/settings"</script>`);
+    }   
+});
+
 //Function to check if the users new password is vulnerable by using pwned password API to check if the password has been leaked before
 async function checkPassword(password) {
     const sha1Hash = require('crypto').createHash('sha1').update(password).digest('hex').toUpperCase();
