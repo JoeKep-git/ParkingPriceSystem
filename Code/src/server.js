@@ -15,7 +15,9 @@ const session = require('express-session');
 const sql = require('mssql');
 //Hashing algorithm
 const bcrypt = require('bcrypt');
-
+//For 2fa
+const speakeasy = require('speakeasy');
+const QRCode = require('qrcode');
 
 //HTTPS Certificates
 const options = {
@@ -227,6 +229,49 @@ app.post('/changePassword', allowLoggedIn, async (req, res) => {
         res.status(500).send(`<script>alert("Internal Server Error"); window.location.href="/settings"</script>`);
     }   
 });
+
+//Generate qr code for 2fa
+// Inside your route handler for setting up 2FA
+app.post('/setup2FA', allowLoggedIn, (req, res) => {
+    // Generate a new secret
+    const secret = speakeasy.generateSecret();
+
+    // Create a data URI for the QR code
+    QRCode.toDataURL(secret.otpauth_url, (err, data_url) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send(`<script>alert("Internal Server Error"); window.location.href="/settings"</script>`);
+            return;
+        }
+
+        // Send the data URL to the client
+        res.json({ secret: secret.base32, qrcode: data_url });
+    });
+});
+
+//verify 2fa
+app.post('/submit2FACode', allowLoggedIn, (req, res) => {
+    const userSubmittedCode = req.body.userSubmittedCode;
+    const userSecret = req.body.userSecret;
+
+    // Verify the submitted code
+    const isValid = speakeasy.totp.verify({
+        secret: userSecret,
+        encoding: 'base32',
+        token: userSubmittedCode
+    });
+
+    if (isValid) {
+        // Code is valid, save userSecret to the database
+        // Make sure to encrypt it before saving
+        // ...
+        res.json({ success: true });
+    } else {
+        res.json({ success: false, error: 'Invalid 2FA code' });
+    }
+});
+
+
 
 //Function to check if the users new password is vulnerable by using pwned password API to check if the password has been leaked before
 async function checkPassword(password) {
