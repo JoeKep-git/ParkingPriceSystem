@@ -1,0 +1,20 @@
+services:
+  api:
+    build: ./src
+    container_name: api_backend
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./src:/app/src
+      - ./node_modules:/app/node_modules
+  db:
+    env_file:
+      - .env
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: ${DB_PASS}
+      ACCEPT_EULA: "Y"
+volumes:
+  mssql-data:

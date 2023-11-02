@@ -14,7 +14,7 @@ const session = require('express-session');
 //Sql server
 const sql = require('mssql');
 //Hashing algorithm
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 //For 2fa
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');

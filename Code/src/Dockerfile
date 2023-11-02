@@ -1,6 +1,11 @@
 FROM node:latest
-COPY package.json /app/
-COPY src /app/
 WORKDIR /app
+RUN apt-get update
+COPY ../package.json .
+RUN npm install -g nodemon
 RUN npm install
-CMD ["node", "server.js"]
+COPY . .
+RUN npm uninstall bcrypt
+RUN npm install bcryptjs --save
+EXPOSE 8000
+CMD ["npm", "run", "dev"]
