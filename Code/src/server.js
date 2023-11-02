@@ -35,6 +35,11 @@ const options = {
 //Copy and paste result into encryption secret key in .env file
 // console.log('Generated Secret Key:', generateSecretKey());
 
+// Set EJS as the view engine
+app.set('view engine', 'ejs');
+
+// Specify the directory where your EJS templates are stored (assuming they're in a 'views' folder)
+app.set('views', __dirname+'/Public/HTML');
 
 // Function to encrypt data using AES
 function encrypt(text, secretKey) {
@@ -95,7 +100,7 @@ function alreadyLoggedIn(req, res, next) {
 
 //function that checks if user is logged in and allows them to go on this page
 function allowLoggedIn(req, res, next) {
-    if (req.session.isLoggedIn) {
+    if (req.session.isLoggedIn || req.session.is2FAVerified) {
         next();
     }
     else {
@@ -128,11 +133,11 @@ app.get('/', (req, res) => {
 
 //Getting the login page
 app.get('/login', alreadyLoggedIn, (req, res) => {
-    fs.readFile(__dirname+'/Public/HTML/Login.html', 'utf8', (err, data) => {
+    fs.readFile(__dirname+'/Public/HTML/Login.ejs', 'utf8', (err, data) => {
     if (err) {
             console.log(err);
             console.log(__dirname);
-            console.log(__dirname+"/HTML/Login.html");
+            console.log(__dirname+"/HTML/Login.ejs");
             res.status(500).send('Internal Server Error');
         }
         res.send(data);
@@ -262,7 +267,6 @@ app.post('/changePassword', allowLoggedIn, async (req, res) => {
 //Generate qr code for 2fa
 app.post('/setup2FA', allowLoggedIn, (req, res) => {
     const username = req.session.user.username;
-
     // Check if user already has a QR secret stored in the database
     sql.connect(sqlConfig, (err) => {
         if (err) {
@@ -292,9 +296,8 @@ app.post('/setup2FA', allowLoggedIn, (req, res) => {
                     console.error(err);
                     return res.status(500).json({success: false, error: 'Internal Server Error', url: '/settings'});
                 }
-
                 // Send the data URL to the client
-                res.json({ secret: secret.base32, qrcode: data_url });
+                res.json({ success: true, secret: secret.base32, qrcode: data_url });
             });
         });
     });
@@ -346,11 +349,11 @@ app.post('/create2FA', allowLoggedIn, (req, res) => {
 
 app.post('/verify2FA', allowLoggedIn, (req, res) => {
     const userSubmittedCode = req.body.userSubmittedCode;
-
+    console.log('User submitted code: ' + userSubmittedCode);
     sql.connect(sqlConfig, (err) => {
         if (err) {
             console.log(err);
-            return res.status(500).send('Internal Server Error');
+            return res.status(500).json({success: false, error: 'Internal Server Error'});
         }
 
         const request = new sql.Request();
@@ -359,7 +362,7 @@ app.post('/verify2FA', allowLoggedIn, (req, res) => {
         request.query('SELECT qrsecret FROM users WHERE username = @username', (err, result) => {
             if (err) {
                 console.log(err);
-                return res.status(500).send('Internal Server Error');
+                return res.status(500).json({success: false, error: 'Internal Server Error'});
             }
 
             if (result.recordset.length > 0 && result.recordset[0].qrsecret) {
@@ -371,17 +374,18 @@ app.post('/verify2FA', allowLoggedIn, (req, res) => {
                     encoding: 'base32',
                     token: userSubmittedCode
                 });
-
+                console.log(result.recordset[0]);
                 if (isValid) {
                     // Code is valid
                     req.session.is2FAVerified = true;
-                    res.json({ success: true });
+                    req.session.isLoggedIn = true;
+                    res.status(200).json({ success: true });
                 } else {
-                    res.json({ success: false, error: 'Invalid 2FA code' });
+                    res.status(400).json({ success: false, error: 'Invalid 2FA code' });
                 }
             } else {
                 sql.close();
-                res.json({ success: false, error: '2FA is not set up for this account' });
+                res.status(400).json({ success: false, error: '2FA is not set up for this account' });
             }
         });
     });
@@ -486,32 +490,38 @@ app.post('/login', async (req, res) => {
         const request = new sql.Request();
         request.input('username', sql.NVarChar, username); 
 
-        //query to find the user with the username
+        // Query to find the user with the username
         const result = await request.query(`SELECT * FROM Users WHERE username = @username`);
 
         const user = result.recordset[0];
 
-        //checks if the password matches the hashed password in the database of the user and if their is a user with that username
         if (user && await bcrypt.compare(password, user.password)) {
-            //setting the session variables
-            req.session.isLoggedIn = true;
             req.session.user = { username: user.username };
-            console.log(req.session.user);
-            res.status(200).redirect('/');
+            if (user.QRSecret) {
+                const has2FA = true;
+                req.session.is2FAVerified = true;
+                // User has a QR secret, ask for 2FA code
+                res.render('login', { has2FA: has2FA });
+            } else {
+                // User doesn't have a QR secret, proceed with regular login
+                req.session.isLoggedIn = true;
+                res.redirect('/');
+            }
         } else {
-            res.status(401).send('<script>alert("Invalid credentials"); window.location="/login";</script>'); //sends an error and alert that the credentials are invalid and redirects back to login page
+            res.status(401).send('<script>alert("Invalid credentials"); window.location="/login";</script>');
         }
     } catch (error) {
         console.error(error);
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('<script>alert("Database error"); window.location="/login";</script>');
     } finally {
         await sql.close();
     }
 });
 
+
 app.post('/logout', (req, res) => {
     req.session.destroy();
-    res.status(200);
+    res.status(200).redirect('/');
 });
 
 /**
