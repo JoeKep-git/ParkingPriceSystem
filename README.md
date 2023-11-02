@@ -10,3 +10,5 @@ Change the name of `CHANGEME.env` to just `.env` and fill out the details. One w
 Now you can connect to `https://localhost:8000`. You may get a warning that the website isn't safe, this is only because the certificate is self certified so the browser does not like it. This is still using the HTTPS protocol.
 
 You can now go through and create an account, with or without 2FA, and find petrol station prices near you by inputting a post code and a max of 10 km distance.
+
+You may need to run `docker inspect docker_container` and replace `docker_container` with the container id for mssql and find the ip address used, which you will put in the .env file.
