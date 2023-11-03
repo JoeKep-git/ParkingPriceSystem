@@ -195,31 +195,51 @@ function searchByPostcode() {
 }
 
 
+// This function calculates the distance between two points on the Earth's surface using the Haversine formula.
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // Radius of the Earth in kilometers
+
+    // Convert latitude and longitude from degrees to radians
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    // Haversine formula to calculate the great-circle distance
     const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in kilometers
 
-    return distance;
+    /** 
+     * used to calculate the distance between two points on the surface of a sphere, 
+     * such as the Earth. In this case, it is specifically 
+     * used to find the great-circle distance, which is the shortest 
+     * distance between two points on the surface of a sphere
+    */
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    // Calculate the distance in kilometers
+    const distance = R * c;
+
+    return distance; // Return the distance between the two points
 }
 
+// This function finds points within a certain radius from a given center point.
 function findPointsWithinRadius(centerLat, centerLon, radius, points) {
-    const result = [];
+    const result = []; // Initialize an empty array to store the points within the radius
 
+    // Iterate through each point in the 'points' array
     for (const point of points) {
+        // Calculate the distance between the center point and the current point
         const distance = calculateDistance(centerLat, centerLon, point.location.latitude, point.location.longitude);
+
+        // Check if the distance is less than or equal to the specified radius
         if (distance <= radius) {
-            result.push(point);
+            result.push(point); // If so, add the point to the result array
         }
     }
 
-    return result;
+    return result; // Return the array of points within the radius
 }
 
 /****************************End******************************************************************* */
