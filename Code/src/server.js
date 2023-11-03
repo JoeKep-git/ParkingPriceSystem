@@ -77,6 +77,7 @@ const sqlConfig = {
 app.use(express.static(__dirname+'/Public')); //Serving static files
 app.use(express.json());
 app.use(bodyParser.urlencoded({extended: true}));
+app.use('/images', express.static(__dirname+'/Public/Images'));
 
 app.use(session({
     secret: process.env.SECRET,
@@ -165,6 +166,29 @@ app.get('/settings', allowLoggedIn, (req, res) => {
             console.log(err);
             console.log(__dirname);
             console.log(__dirname+"/HTML/Settings.html");
+            res.status(500).send('Internal Server Error');
+        }
+
+        // Get session data
+        // If the user is logged in, isLoggedIn will be true, otherwise it will be false
+        const isLoggedIn = req.session.isLoggedIn;
+        const username = req.session.user ? req.session.user.username : '';
+
+        // Add session data to the HTML
+        data = data.replace('<!--#isLoggedIn#-->', isLoggedIn);
+        data = data.replace('<!--#username#-->', username);
+
+        res.send(data);
+    });
+});
+
+//Getting the tutorial page
+app.get('/tutorial', (req, res) => {
+    fs.readFile(__dirname+'/Public/HTML/Tutorial.html', 'utf8', (err, data) => {
+        if(err) {
+            console.log(err);
+            console.log(__dirname);
+            console.log(__dirname+"/HTML/Tutorial.html");
             res.status(500).send('Internal Server Error');
         }
 
