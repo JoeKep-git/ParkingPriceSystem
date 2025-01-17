@@ -1,4 +1,4 @@
-# ParkingPriceSystem
+# FuelPriceSystem
 This is for my project where I make a system to find the nearest cheapest petrol stations
 
 Run the `docker-compose up -d --build` to run the application in Docker.
